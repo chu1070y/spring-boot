@@ -1,11 +1,13 @@
 package org.salem;
 
+import java.util.Arrays;
 import java.util.Optional;
 import java.util.stream.IntStream;
 
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.salem.domain.BoardVO;
+import org.salem.domain.QBoardVO;
 import org.salem.persistence.BoardRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -14,6 +16,9 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.test.context.junit4.SpringRunner;
+
+import com.querydsl.core.BooleanBuilder;
+import com.querydsl.core.types.dsl.BooleanExpression;
 
 import lombok.Setter;
 import lombok.extern.java.Log;
@@ -27,58 +32,90 @@ public class BoardTests {
 	private BoardRepository boardRepository;
 	
 	@Test
-	public void testFind4() {
+	public void testDynamic() {
 		
-		//0은 페이지 번호, 5은 5개씩
-		Pageable pageable = PageRequest.of(0, 5, Sort.Direction.DESC,"bno");
+//		String type = "t";
+		String[] types = {"t","c"};
+		String keyword = "10";
 		
-		//메소드이름에 따라 쿼리문 실행이 된다.
-		boardRepository.findByTitleContainingAndBnoGreaterThan("7",0L,pageable).forEach(vo -> log.info(""+vo));
+		//where조건에 맞는지 안맞는지 보는것
+		//where 조건에만 해당되어서 order by는 없다.
+		BooleanBuilder builder = new BooleanBuilder();
 		
-	}
-	
-	@Test
-	public void testFind3() {
+		QBoardVO board = QBoardVO.boardVO;
 		
-		//0은 페이지 번호, 10은 10개씩
-		Pageable pageable = PageRequest.of(0, 5, Sort.Direction.DESC,"bno");
+		BooleanExpression[] arr = new BooleanExpression[types.length];
 		
-		//메소드이름에 따라 쿼리문 실행이 된다.
-		boardRepository.findByTitleContaining("7",pageable).forEach(vo -> log.info(""+vo));
+		for (int i = 0 ; i < types.length; i++) {
+			
+			String type = types[i];
+			
+			BooleanExpression cond = null;
+			
+			if(type.equals("t")) {
+			
+				cond = board.title.contains(keyword);
+			}
+			
+			if(type.equals("c")) {
+			
+				cond = board.content.contains(keyword);
+			}
+			
+			arr[i] = cond;
+			
+		}//end for
 		
-	}
-	
-	@Test
-	public void testFind2() {
-		//메소드이름에 따라 쿼리문 실행이 된다.
-		boardRepository.findByTitleContainingOrderByBnoDesc("2").forEach(vo -> log.info(""+vo));
+		builder.andAnyOf(arr);
 		
-	}
-	
-	@Test
-	public void testFind1() {
+		builder.and(board.bno.gt(0));
 		
-		//0은 페이지 번호, 10은 10개씩
-		Pageable pageable = PageRequest.of(0, 10, Sort.Direction.DESC,"bno");
+		Page<BoardVO> result = boardRepository.findAll(builder, PageRequest.of(0, 10, Sort.Direction.DESC,"bno"));
 		
-		//메소드이름에 따라 쿼리문 실행이 된다.
-		Page<BoardVO> result = boardRepository.findByBnoGreaterThan(0L,pageable);
-		
-		//이렇게 하면 select 쿼리가 두개 날라간다.
-		//우리가 게시판할때 필요한 count쿼리까지 날라간다.
 		log.info(""+result);
 		
-		log.info("Total pages: "+result.getTotalPages());
-		log.info("Page: "+result.getNumber());
-		log.info("Next: "+result.hasNext());
-		log.info("Prev: "+result.hasPrevious());
+	}
+	
+	
+	@Test
+	public void testTitle() {
 		
-		//
-		log.info("P Next"+result.nextPageable());
-		log.info("P Prev"+result.previousPageable());
+		Page<BoardVO> result = boardRepository.getListByTitle("10",PageRequest.of(0, 10));
+		log.info("=========================");
+		log.info(""+result);
+		log.info("=========================");
 		
-		//이건 실제 데이터
-		result.getContent().forEach(vo -> log.info("" + vo));
+		result.getContent().forEach(vo -> log.info(""+vo));
+	}
+	
+	@Test
+	public void testContent() {
+		
+		Page<BoardVO> result = boardRepository.getListByContent("10",PageRequest.of(0, 10));
+		log.info("=========================");
+		log.info(""+result);
+		log.info("=========================");
+		
+		result.getContent().forEach(vo -> log.info(""+vo));
+	}
+	
+	@Test
+	public void testWriter() {
+		
+		Page<BoardVO> result = boardRepository.getListByWriter("9",PageRequest.of(0, 10));
+		log.info("=========================");
+		log.info(""+result);
+		log.info("=========================");
+		
+		result.getContent().forEach(vo -> log.info(""+vo));
+	}
+	
+	@Test
+	public void testList() {
+		
+		Page<BoardVO> result = boardRepository.getList(PageRequest.of(0, 10));
+		
+		log.info(""+result);
 	}
 	
 	@Test
@@ -98,17 +135,6 @@ public class BoardTests {
 		
 		boardRepository.save(vo);
 		
-		
-//		
-//		//10번글 수정하기
-//		boardRepository.findById(10L).ifPresent(vo -> {
-//			
-//			vo.setContent("수정된 제목입니다.");
-//			
-//			boardRepository.save(vo);
-//			
-//		});
-		
 	}
 	
 	@Test
@@ -127,11 +153,11 @@ public class BoardTests {
 	@Test
 	public void testInsert() {
 		
-		IntStream.range(0, 100).forEach(i -> {
+		IntStream.range(100, 1000).forEach(i -> {
 			
 			BoardVO vo = new BoardVO();
-			vo.setTitle("게시물" + i);
-			vo.setContent("내용"+i);
+			vo.setTitle("추게시물" + i);
+			vo.setContent("추내용"+i);
 			vo.setWriter("user"+(i%10) );
 			
 			boardRepository.save(vo);

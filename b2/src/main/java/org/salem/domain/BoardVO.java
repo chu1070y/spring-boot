@@ -1,5 +1,6 @@
 package org.salem.domain;
 
+import java.io.Serializable;
 import java.time.LocalDateTime;
 
 import javax.persistence.Column;
@@ -19,14 +20,19 @@ import lombok.Data;
 @Entity
 @Table(name="tbl_board")
 @Data
-public class BoardVO {
+public class BoardVO implements Serializable{
 	
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
 	//db에 자동으로 만들기 위해 이 노테이션들을 써준다.
 	@Id
 	@GeneratedValue(strategy=GenerationType.SEQUENCE, generator="seq_board")
 	@SequenceGenerator(name="seq_board", sequenceName="SEQ_BOARD" )
 	private Long bno;
-	
+	  
 	@Column(length=300)
 	private String title;
 	
