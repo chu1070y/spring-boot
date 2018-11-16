@@ -16,10 +16,10 @@ spring:
     
   thymeleaf:
     cache: false
-    
 
 logging:
   level:
     org.hibernate: debug
     org.springframework: info
     org.salem: debug
+    
